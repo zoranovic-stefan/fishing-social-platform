@@ -13,4 +13,10 @@ export class CatchesService {
   getCatch(id: string): { id: number; species: string; lengthCm: number; weightKg: number } {
     return { id: parseInt(id), species: 'Northern Pike', lengthCm: 82, weightKg: 4.2 };
   }
+
+  getStats() {
+    return {
+      totalCatches: this.getCatches().length,
+    };
+  }
 }

@@ -14,4 +14,9 @@ export class CatchesController {
   getCatch(@Param('id') id: string) {
     return this.catchesService.getCatch(id);
   }
+
+  @Get('stats')
+  getStats() {
+    return this.catchesService.getStats();
+  }
 }
