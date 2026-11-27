@@ -32,3 +32,7 @@ export const catches = mysqlTable('catches', {
     .defaultNow()
     .notNull(),
 });
+
+export type CatchRecord = typeof catches.$inferSelect;
+
+export type NewCatchRecord = typeof catches.$inferInsert;

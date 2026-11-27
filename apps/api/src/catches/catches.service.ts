@@ -1,22 +1,60 @@
-import { Injectable } from '@nestjs/common';
+import { Inject,Injectable } from '@nestjs/common';
+
+import { DATABASE } from '../database/database.provider.js';
+import type { Database } from '../database/database.provider.js';
+import type { Catch } from './interfaces/catch.interface.js';
+import { catches } from '../database/schema/catches.schema.js';
+import { eq } from 'drizzle-orm';
+import { NotFoundException } from '@nestjs/common';
+import type { CreateCatchDto } from './dto/create-catch.dto.js';
+import type { NewCatchRecord } from '../database/schema/catches.schema.js';
 
 @Injectable()
 export class CatchesService {
-  getCatches(): { id: number; species: string; lengthCm: number; weightKg: number }[] {
-    return [
-      { id: 1, species: 'Northern Pike', lengthCm: 82, weightKg: 4.2 },
-      { id: 2, species: 'Smallmouth Bass', lengthCm: 43, weightKg: 1.8 },
-      { id: 3, species: 'Walleye', lengthCm: 56, weightKg: 2.5 },
-    ];
+  constructor(
+    @Inject(DATABASE) private readonly db: Database,
+  ) {}
+
+  async getCatches(): Promise<Catch[]> {
+    const results = await this.db.select().from(catches);
+
+    if (!results) {
+      throw new NotFoundException('No catches found');
+    }
+    return results.map((result) => ({
+      id: result.id,
+      species: result.species,
+      lengthCm: Number(result.lengthCm),
+      weightKg: Number(result.weightKg),
+    }));
   }
 
-  getCatch(id: string): { id: number; species: string; lengthCm: number; weightKg: number } {
-    return { id: parseInt(id), species: 'Northern Pike', lengthCm: 82, weightKg: 4.2 };
-  }
+  async getCatch(id: number): Promise<Catch> {
+    const [result] = await this.db.select().from(catches).where(eq(catches.id, id)).limit(1);
 
-  getStats() {
+    if (!result) {
+      throw new NotFoundException(`Catch with ID ${id} was not found`);
+    }
     return {
-      totalCatches: this.getCatches().length,
+      id: result.id,
+      species: result.species,
+      lengthCm: Number(result.lengthCm),
+      weightKg: Number(result.weightKg),
     };
   }
+
+  async createCatch(createCatchDto: CreateCatchDto): Promise<Catch> {
+    const newCatch: NewCatchRecord = {
+      species: createCatchDto.species,
+      lengthCm: createCatchDto.lengthCm.toFixed(2),
+      weightKg: createCatchDto.weightKg.toFixed(3),
+      caughtAt: new Date(createCatchDto.caughtAt),
+    };
+
+    const [result] = await this.db.insert(catches).values(newCatch).$returningId();
+
+    return this.getCatch(result.id);
+  }
+
+
 }
